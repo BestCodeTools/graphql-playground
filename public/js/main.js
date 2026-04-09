@@ -296,6 +296,64 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
     });
   }
 
+  function parseJsonObject(text, fallbackValue) {
+    const safeText = typeof text === 'string' ? text.trim() : '';
+
+    if (!safeText) {
+      return fallbackValue;
+    }
+
+    const parsed = JSON.parse(safeText);
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+      throw new Error('Expected a JSON object.');
+    }
+
+    return parsed;
+  }
+
+  function getSharedHeadersMap() {
+    const sharedHeaders = AppState.getKey(SHARED_HEADERS_STORAGE_KEY) || [];
+
+    if (!Array.isArray(sharedHeaders)) {
+      return {};
+    }
+
+    return sharedHeaders.reduce((acc, header) => {
+      const key = header && typeof header.key === 'string' ? header.key.trim() : '';
+      const value = header && typeof header.value === 'string' ? header.value : '';
+
+      if (!key) {
+        return acc;
+      }
+
+      acc[key] = value;
+      return acc;
+    }, {});
+  }
+
+  function formatResponseBody(response, payload) {
+    const contentType = response.headers.get('content-type') || '';
+    const isJsonResponse = contentType.toLowerCase().includes('application/json');
+
+    return Promise.resolve().then(() => {
+      if (isJsonResponse) {
+        return response.json().then((data) => JSON.stringify(data, null, 2));
+      }
+
+      return response.text().then((text) => {
+        if (!text) {
+          return JSON.stringify(payload, null, 2);
+        }
+
+        try {
+          return JSON.stringify(JSON.parse(text), null, 2);
+        } catch (error) {
+          return text;
+        }
+      });
+    });
+  }
+
   function applyAutomaticTabTitle(tab, tabIndex) {
     if (!tab) {
       return;
@@ -352,6 +410,10 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
       if (activeTab.headersEditorApi && activeTab.headersEditorApi.refresh) {
         activeTab.headersEditorApi.refresh();
       }
+
+      if (activeTab.responseViewerApi && activeTab.responseViewerApi.refresh) {
+        activeTab.responseViewerApi.refresh();
+      }
     }, 0);
 
     $timeout(() => {
@@ -365,6 +427,10 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
 
       if (activeTab.headersEditorApi && activeTab.headersEditorApi.refresh) {
         activeTab.headersEditorApi.refresh();
+      }
+
+      if (activeTab.responseViewerApi && activeTab.responseViewerApi.refresh) {
+        activeTab.responseViewerApi.refresh();
       }
     }, 120);
   }
@@ -737,6 +803,59 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
 
     $ctrl.persistTabs();
 
+    $timeout(() => {
+      $scope.$applyAsync();
+    }, 0);
+  };
+
+  $ctrl.send = async function () {
+    const activeTab = $ctrl.tabs[$ctrl.activeTab];
+
+    if (!activeTab) {
+      return;
+    }
+
+    const rawQuery = typeof activeTab.query === 'string' ? activeTab.query.trim() : '';
+    if (!rawQuery || rawQuery === $ctrl.t('query.placeholder')) {
+      activeTab.result = JSON.stringify({ error: 'Query is empty.' }, null, 2);
+      $ctrl.persistTabs();
+      return;
+    }
+
+    activeTab.result = 'Loading...';
+    $ctrl.persistTabs();
+
+    try {
+      const variables = parseJsonObject(activeTab.variables, {});
+      const requestHeaders = parseJsonObject(activeTab.headers, {});
+      const mergedHeaders = {
+        'Content-Type': 'application/json',
+        ...getSharedHeadersMap(),
+        ...requestHeaders
+      };
+
+      const response = await fetch($ctrl.url, {
+        method: 'POST',
+        headers: mergedHeaders,
+        body: JSON.stringify({
+          query: activeTab.query,
+          variables
+        })
+      });
+
+      const formattedBody = await formatResponseBody(response, {
+        status: response.status,
+        statusText: response.statusText
+      });
+
+      activeTab.result = formattedBody;
+    } catch (error) {
+      activeTab.result = JSON.stringify({
+        error: error && error.message ? error.message : 'Request failed.'
+      }, null, 2);
+    }
+
+    $ctrl.persistTabs();
     $timeout(() => {
       $scope.$applyAsync();
     }, 0);
