@@ -49,12 +49,24 @@ body.ready > * {
   border-bottom: none;
 }
 .tabs .add-tab {
-  padding: 0 12px;
+  padding: 5px 10px;
   text-align: center;
-  font-size: 2rem;
+  font-size: 1rem;
+  line-height: 1;
+  border: 1px solid #666;
+  background-color: #333;
+  border-radius: 0;
+  cursor: pointer;
 }
 .tabs .add-tab, .tabs .tab-item {
   display: inline-block;
+}
+.tabs .add-tab > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  font-weight: 700;
 }
 .tabs .add-tab > a, .tabs .tab-item > a {
   color: #f4f4f4;
