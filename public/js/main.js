@@ -152,7 +152,7 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
   $ctrl.title = 'AngularJS Tutorial Example';
   $ctrl.message = 'Hello World!';
   $ctrl.ready = true;
-  $ctrl.appVersion = 'v1.0.1';
+  $ctrl.appVersion = 'v1.0.2';
   $ctrl.locales = I18nService.getLocales();
   $ctrl.locale = I18nService.getLocale();
   $ctrl.t = function (key) {
@@ -162,7 +162,26 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
   $ctrl.activeTab = 0;
   $ctrl.schema = null;
   $ctrl.loadSchemaError = null;
-  $ctrl.url = sessionStorage.getItem('url') || 'http://localhost:4000/graphql';
+  function getDefaultGraphqlUrl() {
+    if (typeof window === 'undefined' || !window.location) {
+      return 'http://localhost:4000/graphql';
+    }
+
+    const { protocol, hostname, host } = window.location;
+    const normalizedHost = String(hostname || '').toLowerCase();
+    const isLoopbackHost = normalizedHost === 'localhost'
+      || normalizedHost === '127.0.0.1'
+      || normalizedHost === '::1'
+      || normalizedHost === '[::1]';
+
+    if (isLoopbackHost) {
+      return 'http://localhost:4000/graphql';
+    }
+
+    return `${protocol}//${host}/graphql`;
+  }
+
+  $ctrl.url = sessionStorage.getItem('url') || getDefaultGraphqlUrl();
   // Estado inicial
   $ctrl.showConfig = false;
 
