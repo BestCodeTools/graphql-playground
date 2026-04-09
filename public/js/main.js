@@ -50,7 +50,13 @@ app.factory('I18nService', ['AppState', function (AppState) {
       'config.key_placeholder': 'Key',
       'config.value_placeholder': 'Value',
       'config.add_header': '+ Add Header',
-      'config.other_placeholder': 'Other Settings (placeholder)',
+      'config.other_placeholder': 'Other',
+      'workspace.export': 'Export Workspace',
+      'workspace.import': 'Import Workspace',
+      'workspace.note': 'Export and import your full workspace, including tabs and settings.',
+      'workspace.import_error': 'Could not import this workspace file.',
+      'workspace.token_placeholder': '[your token here]',
+      'workspace.key_placeholder': '[your key here]',
       'query.placeholder': '/* Type your query here */'
     },
     'pt-BR': {
@@ -137,9 +143,10 @@ app.factory('TabService', ['AppState', function (state) {
   };
 }]);
 
-app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nService', function ($scope, $timeout, TabService, I18nService) {
+app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService', 'I18nService', function ($scope, $timeout, AppState, TabService, I18nService) {
   const $ctrl = this;
   const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
+  const SHARED_HEADERS_STORAGE_KEY = 'sharedHeaders';
   $scope.$ctrl = $ctrl;
   // Estado inicial
   $ctrl.title = 'AngularJS Tutorial Example';
@@ -213,6 +220,82 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     return `${$ctrl.t('tabs.default')} ${tabIndex}`;
   }
 
+  function getWorkspaceLabel(key) {
+    const isPtBr = I18nService.getLocale() === 'pt-BR';
+
+    const labels = {
+      export: isPtBr ? 'Exportar Workspace' : 'Export Workspace',
+      import: isPtBr ? 'Importar Workspace' : 'Import Workspace',
+      note: isPtBr
+        ? 'Exporte e importe seu workspace completo, incluindo abas e configurações.'
+        : 'Export and import your full workspace, including tabs and settings.',
+      importError: isPtBr
+        ? 'Não foi possível importar este arquivo de workspace.'
+        : 'Could not import this workspace file.',
+      tokenPlaceholder: isPtBr ? '[seu token aqui]' : '[your token here]',
+      keyPlaceholder: isPtBr ? '[sua chave aqui]' : '[your key here]'
+    };
+
+    return labels[key] || '';
+  }
+
+  function isSensitiveHeaderName(headerName) {
+    const normalizedName = String(headerName || '').trim().toLowerCase();
+    return normalizedName === 'authorization' || normalizedName.includes('token') || normalizedName.includes('key');
+  }
+
+  function getHeaderExportPlaceholder(headerName) {
+    const normalizedName = String(headerName || '').trim().toLowerCase();
+    return normalizedName.includes('key')
+      ? getWorkspaceLabel('keyPlaceholder')
+      : getWorkspaceLabel('tokenPlaceholder');
+  }
+
+  function sanitizeHeadersTextForExport(headersText) {
+    const safeText = typeof headersText === 'string' ? headersText : '{}';
+
+    try {
+      const parsed = JSON.parse(safeText);
+
+      if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+        return safeText;
+      }
+
+      const sanitized = Object.keys(parsed).reduce((acc, key) => {
+        acc[key] = isSensitiveHeaderName(key)
+          ? getHeaderExportPlaceholder(key)
+          : parsed[key];
+        return acc;
+      }, {});
+
+      return JSON.stringify(sanitized, null, 2);
+    } catch (error) {
+      return safeText.replace(/"([^"]+)"\s*:\s*"([^"]*)"/g, (match, key) => {
+        if (!isSensitiveHeaderName(key)) {
+          return match;
+        }
+
+        return `"${key}": "${getHeaderExportPlaceholder(key)}"`;
+      });
+    }
+  }
+
+  function sanitizeSharedHeadersForExport(headers) {
+    if (!Array.isArray(headers)) {
+      return [];
+    }
+
+    return headers.map((header) => {
+      const key = header && typeof header.key === 'string' ? header.key : '';
+      const value = header && typeof header.value === 'string' ? header.value : '';
+
+      return {
+        key,
+        value: isSensitiveHeaderName(key) ? getHeaderExportPlaceholder(key) : value
+      };
+    });
+  }
+
   function applyAutomaticTabTitle(tab, tabIndex) {
     if (!tab) {
       return;
@@ -220,6 +303,70 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
 
     const manualTitle = typeof tab.userDefinedLabel === 'string' ? tab.userDefinedLabel.trim() : '';
     tab.title = manualTitle || getTabTitleFromQuery(tab.query, tabIndex);
+  }
+
+  function normalizeTab(tab, index) {
+    const normalizedTab = {
+      id: tab && tab.id ? tab.id : TabService.generateTabId(),
+      title: tab && typeof tab.title === 'string' ? tab.title : `${$ctrl.t('tabs.default')} ${index}`,
+      userDefinedLabel: tab && typeof tab.userDefinedLabel === 'string'
+        ? tab.userDefinedLabel
+        : (tab && tab.hasManualTitle ? (tab.title || '') : ''),
+      query: tab && typeof tab.query === 'string' ? tab.query : $ctrl.t('query.placeholder'),
+      variables: tab && typeof tab.variables === 'string' ? tab.variables : '{}',
+      headers: tab && typeof tab.headers === 'string' ? tab.headers : '{}',
+      result: tab && typeof tab.result === 'string' ? tab.result : '',
+      isEditingTitle: false
+    };
+
+    applyAutomaticTabTitle(normalizedTab, index);
+    delete normalizedTab.hasManualTitle;
+    return normalizedTab;
+  }
+
+  function setTabs(nextTabs) {
+    const normalizedTabs = Array.isArray(nextTabs) && nextTabs.length
+      ? nextTabs.map((tab, index) => normalizeTab(tab, index))
+      : [normalizeTab({}, 0)];
+
+    $ctrl.tabs = normalizedTabs;
+    TabService.saveTabs($ctrl.tabs);
+  }
+
+  function refreshActiveTabEditors() {
+    const activeTab = $ctrl.tabs[$ctrl.activeTab];
+
+    if (!activeTab) {
+      return;
+    }
+
+    $timeout(() => {
+      if (activeTab.queryEditorApi && activeTab.queryEditorApi.refresh) {
+        activeTab.queryEditorApi.refresh();
+      }
+
+      if (activeTab.variablesEditorApi && activeTab.variablesEditorApi.refresh) {
+        activeTab.variablesEditorApi.refresh();
+      }
+
+      if (activeTab.headersEditorApi && activeTab.headersEditorApi.refresh) {
+        activeTab.headersEditorApi.refresh();
+      }
+    }, 0);
+
+    $timeout(() => {
+      if (activeTab.queryEditorApi && activeTab.queryEditorApi.refresh) {
+        activeTab.queryEditorApi.refresh();
+      }
+
+      if (activeTab.variablesEditorApi && activeTab.variablesEditorApi.refresh) {
+        activeTab.variablesEditorApi.refresh();
+      }
+
+      if (activeTab.headersEditorApi && activeTab.headersEditorApi.refresh) {
+        activeTab.headersEditorApi.refresh();
+      }
+    }, 120);
   }
 
   $ctrl.beginTabTitleEdit = function (tabIndex, $event) {
@@ -322,29 +469,10 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   });
   // Carrega as abas do sessionStorage
   function loadTabs() {
-    let storedTabs = TabService.getTabs();
+    const storedTabs = TabService.getTabs();
 
     // Garante que cada aba tenha um ID único (evita duplicatas no ngRepeat)
-    storedTabs = storedTabs.map(tab => ({
-      ...tab,
-      id: tab.id || TabService.generateTabId(),
-      isEditingTitle: false
-    }));
-
-    storedTabs.forEach((tab) => {
-      if (typeof tab.userDefinedLabel !== 'string') {
-        tab.userDefinedLabel = tab.hasManualTitle ? (tab.title || '') : '';
-      }
-
-      delete tab.hasManualTitle;
-    });
-
-    storedTabs.forEach((tab, index) => {
-      applyAutomaticTabTitle(tab, index);
-    });
-
-    $ctrl.tabs = storedTabs;
-    TabService.saveTabs($ctrl.tabs);
+    setTabs(storedTabs);
 
     const storedActiveTab = parseInt(sessionStorage.getItem(ACTIVE_TAB_STORAGE_KEY), 10);
     if (Number.isInteger(storedActiveTab) && storedActiveTab >= 0) {
@@ -614,6 +742,72 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     }, 0);
   };
 
+  $ctrl.downloadWorkspace = function () {
+    const exportPayload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      locale: I18nService.getLocale(),
+      url: $ctrl.url,
+      activeTab: $ctrl.activeTab,
+      sharedHeaders: sanitizeSharedHeadersForExport(AppState.getKey(SHARED_HEADERS_STORAGE_KEY) || []),
+      tabs: ($ctrl.tabs || []).map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        userDefinedLabel: tab.userDefinedLabel || '',
+        query: tab.query || '',
+        variables: tab.variables || '{}',
+        headers: sanitizeHeadersTextForExport(tab.headers),
+        result: tab.result || ''
+      }))
+    };
+
+    const json = JSON.stringify(exportPayload, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = objectUrl;
+    link.download = 'graphql-playground-workspace.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  $ctrl.importWorkspace = function (workspace) {
+    if (!workspace || typeof workspace !== 'object') {
+      throw new Error(getWorkspaceLabel('importError'));
+    }
+
+    const nextLocale = typeof workspace.locale === 'string' ? workspace.locale : I18nService.getLocale();
+    $ctrl.locale = I18nService.setLocale(nextLocale);
+
+    if (Array.isArray(workspace.sharedHeaders)) {
+      AppState.saveKey(SHARED_HEADERS_STORAGE_KEY, workspace.sharedHeaders.map((header) => ({
+        key: header && typeof header.key === 'string' ? header.key : '',
+        value: header && typeof header.value === 'string' ? header.value : ''
+      })));
+    }
+
+    setTabs(Array.isArray(workspace.tabs) ? workspace.tabs : []);
+    $ctrl.activeTab = Number.isInteger(workspace.activeTab)
+      ? Math.min(Math.max(workspace.activeTab, 0), Math.max($ctrl.tabs.length - 1, 0))
+      : 0;
+    $ctrl.url = typeof workspace.url === 'string' && workspace.url.trim()
+      ? workspace.url
+      : $ctrl.url;
+
+    sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String($ctrl.activeTab || 0));
+    sessionStorage.setItem('url', $ctrl.url);
+    TabService.saveTabs($ctrl.tabs);
+    loadSchema($ctrl.url);
+    $ctrl.persistTabs();
+
+    $timeout(() => {
+      $scope.$applyAsync();
+    }, 0);
+  };
+
   // Adiciona uma nova aba
   $ctrl.addTab = function () {
     const newTab = {
@@ -654,6 +848,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     }
 
     sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String(newActiveTab));
+    refreshActiveTabEditors();
   });
 
   // Funções auxiliares para atalhos de teclado

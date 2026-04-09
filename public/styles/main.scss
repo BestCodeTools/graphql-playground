@@ -578,6 +578,22 @@ button {
   cursor: pointer;
 }
 
+.workspace-actions-note {
+  margin: 0 0 12px;
+  color: #9aa6b2;
+  line-height: 1.5;
+}
+
+.workspace-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workspace-import-input {
+  display: none;
+}
+
 // .config-tabs .tab-item.active {
 //   font-weight: bold;
 //   border-bottom: 2px solid blue;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground</title>
-  <link rel="stylesheet" href="./styles/main.css?v=20260409i">
+  <link rel="stylesheet" href="./styles/main.css?v=20260409j">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.css">
@@ -12,11 +12,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/edit/matchbrackets.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-  <script src="./js/main.js?v=20260409k"></script>
-  <script src="./js/components/config-editor.js?v=20260409c"></script>
-  <script src="./js/components/query-editor.js?v=20260409s"></script>
-  <script src="./js/components/variables-editor.js?v=20260409j"></script>
-  <script src="./js/components/headers-editor.js?v=20260409h"></script>
+  <script src="./js/main.js?v=20260409m"></script>
+  <script src="./js/components/config-editor.js?v=20260409d"></script>
+  <script src="./js/components/query-editor.js?v=20260409t"></script>
+  <script src="./js/components/variables-editor.js?v=20260409k"></script>
+  <script src="./js/components/headers-editor.js?v=20260409i"></script>
   <script src="./js/components/schema-viewer.js?v=20260409g"></script>
 </head>
 <body ng-class="{ 'ready': main.ready }" ng-controller="MainController as main">
@@ -101,7 +101,7 @@
   <div class="modal config-modal" ng-show="main.showConfig">
     <div class="modal-content">
       <h2>{{ main.t('modal.settings') }}</h2>
-      <config-editor></config-editor>
+      <config-editor export-workspace="main.downloadWorkspace()" import-workspace="main.importWorkspace(workspace)"></config-editor>
       <button class="close-btn" ng-click="main.closeConfig()">{{ main.t('actions.close') }}</button>
     </div>
   </div>

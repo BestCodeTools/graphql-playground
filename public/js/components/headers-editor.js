@@ -509,6 +509,7 @@
       $ctrl.$postLink = function () {
         $ctrl.api = $ctrl.api || {};
         $ctrl.api.format = formatEditor;
+        $ctrl.api.refresh = scheduleRefresh;
         createEditor();
         resizeHandler = () => scheduleRefresh();
         window.addEventListener('resize', resizeHandler);

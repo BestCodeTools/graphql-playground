@@ -27,6 +27,12 @@
     <button ng-click="$ctrl.addHeader()">{{ $ctrl.t('config.add_header') }}</button>
   </div>
   <div ng-if="$ctrl.activeTab === 'other'">
-    <h3>{{ $ctrl.t('config.other_placeholder') }}</h3>
+    <h3>{{ $ctrl.t('config.other') }}</h3>
+    <p class="workspace-actions-note">{{ $ctrl.getWorkspaceLabel('note') }}</p>
+    <div class="workspace-actions">
+      <button type="button" ng-click="$ctrl.handleExportWorkspace()">{{ $ctrl.getWorkspaceLabel('export') }}</button>
+      <button type="button" ng-click="$ctrl.triggerImportWorkspace()">{{ $ctrl.getWorkspaceLabel('import') }}</button>
+      <input id="workspace-import-input" class="workspace-import-input" type="file" accept=".json,application/json" onchange="angular.element(this).scope().$ctrl.handleImportWorkspaceFile(event)">
+    </div>
   </div>
 </div>
