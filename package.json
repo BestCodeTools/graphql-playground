@@ -1,9 +1,22 @@
 {
   "name": "@bestcodetools/graphql-playground",
   "version": "0.0.0",
+  "description": "A standalone GraphQL Playground package with a custom dark UI, schema explorer, smart editors, workspace import/export, and Docker support.",
+  "keywords": [],
+  "homepage": "https://github.com/BestCodeTools/graphql-playground#readme",
+  "bugs": {
+    "url": "https://github.com/BestCodeTools/graphql-playground/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BestCodeTools/graphql-playground.git"
+  },
+  "license": "ISC",
+  "author": "BestCodeTools",
+  "type": "commonjs",
   "main": "index.js",
-  "publishConfig": {
-    "access": "public"
+  "directories": {
+    "test": "tests"
   },
   "scripts": {
     "build": "tsc --outDir dist",
@@ -12,10 +25,9 @@
     "transpile:sass:watch": "sass --watch public/styles:public/styles",
     "test": "jest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
   "devDependencies": {
     "@types/connect-livereload": "^0.6.3",
     "@types/express": "^5.0.0",
@@ -31,7 +43,7 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.3"
   },
-  "dependencies": {
-    "express": "^4.21.2"
+  "publishConfig": {
+    "access": "public"
   }
 }
