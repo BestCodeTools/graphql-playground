@@ -152,7 +152,7 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
   $ctrl.title = 'AngularJS Tutorial Example';
   $ctrl.message = 'Hello World!';
   $ctrl.ready = true;
-  $ctrl.appVersion = 'v1.0.0';
+  $ctrl.appVersion = 'v1.0.1';
   $ctrl.locales = I18nService.getLocales();
   $ctrl.locale = I18nService.getLocale();
   $ctrl.t = function (key) {
