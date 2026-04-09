@@ -167,8 +167,9 @@ body.ready > * {
     .actions {
       margin: auto;
       position: absolute;
-      left: calc(50% - 30px);
-      top: calc(50% - 30px);
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       z-index: 3;
       button {
         border-radius: 100%;
@@ -177,6 +178,27 @@ body.ready > * {
       }
     }
   }
+
+.send-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  font-size: .7rem;
+  line-height: 1;
+  text-indent: 2px;
+  border: 1px solid #606872;
+  background: linear-gradient(180deg, #3a4048 0%, #2f343b 100%);
+  color: #e7eef7;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  &:hover {
+    background: linear-gradient(180deg, #47505a 0%, #3a4048 100%);
+  }
+}
+
   .result {
     display: flex;
     flex-direction: column;
