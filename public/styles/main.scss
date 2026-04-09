@@ -73,6 +73,26 @@ body.ready > * {
         border-color: #4fc1ff;
       }
     }
+    &.tab-item {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+    }
+    .tab-close-btn {
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: transparent;
+      color: #8b97a3;
+      font-size: .95rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: none;
+      &:hover {
+        color: #d7ecff;
+        background: transparent;
+      }
+    }
     &:hover {
       >a {
         color: #20f020;

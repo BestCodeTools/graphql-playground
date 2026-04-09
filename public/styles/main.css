@@ -60,6 +60,11 @@ body.ready > * {
   color: #f4f4f4;
   text-decoration: none;
 }
+.tabs .tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
 .tabs .tab-item .tab-title-input {
   min-width: 120px;
   width: 180px;
@@ -74,6 +79,21 @@ body.ready > * {
 .tabs .tab-item .tab-title-input:focus {
   outline: none;
   border-color: #4fc1ff;
+}
+.tabs .tab-item .tab-close-btn {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: #8b97a3;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+}
+.tabs .tab-item .tab-close-btn:hover {
+  color: #d7ecff;
+  background: transparent;
 }
 .tabs .add-tab:hover, .tabs .tab-item:hover {
   box-shadow: 0 0 5px #20f020;

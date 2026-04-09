@@ -292,6 +292,16 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     }
   };
 
+  $ctrl.handleTabMouseDown = function ($event, tabIndex) {
+    if (!$event || $event.button !== 1 || $ctrl.tabs.length <= 1) {
+      return;
+    }
+
+    $event.preventDefault();
+    $event.stopPropagation();
+    $ctrl.closeTab(tabIndex);
+  };
+
   $scope.$watch('$ctrl.tabs[$ctrl.activeTab].query', (newQuery) => {
     const activeTab = $ctrl.tabs[$ctrl.activeTab];
 
@@ -622,8 +632,13 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   // Fecha uma aba
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
   $ctrl.closeTab = function (index) {
+    if ($ctrl.tabs.length <= 1) {
+      return;
+    }
+
     $ctrl.tabs.splice(index, 1);
     $ctrl.activeTab = clamp($ctrl.activeTab, 0, $ctrl.tabs.length - 1);
+    sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String($ctrl.activeTab || 0));
     TabService.saveTabs($ctrl.tabs);
   };
 
