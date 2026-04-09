@@ -139,6 +139,7 @@ app.factory('TabService', ['AppState', function (state) {
 
 app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nService', function ($scope, $timeout, TabService, I18nService) {
   const $ctrl = this;
+  const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
   $scope.$ctrl = $ctrl;
   // Estado inicial
   $ctrl.title = 'AngularJS Tutorial Example';
@@ -181,6 +182,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   }, 250);
   $ctrl.persistTabs = function () {
     persistTabsDebounced();
+    sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String($ctrl.activeTab || 0));
   };
   $ctrl.saveTabsToSessionStorage = function () {
     $ctrl.persistTabs();
@@ -327,6 +329,11 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
 
     $ctrl.tabs = storedTabs;
     TabService.saveTabs($ctrl.tabs);
+
+    const storedActiveTab = parseInt(sessionStorage.getItem(ACTIVE_TAB_STORAGE_KEY), 10);
+    if (Number.isInteger(storedActiveTab) && storedActiveTab >= 0) {
+      $ctrl.activeTab = Math.min(storedActiveTab, Math.max($ctrl.tabs.length - 1, 0));
+    }
   }
   function loadSchema(newUrl) {
     console.log('Loading schema from', newUrl);
@@ -619,6 +626,14 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   if ($ctrl.tabs.length === 0) {
     $ctrl.addTab();
   }
+
+  $scope.$watch('$ctrl.activeTab', (newActiveTab) => {
+    if (!Number.isInteger(newActiveTab) || newActiveTab < 0) {
+      return;
+    }
+
+    sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String(newActiveTab));
+  });
 
   // Funções auxiliares para atalhos de teclado
   const handleKeyHelpers = {
