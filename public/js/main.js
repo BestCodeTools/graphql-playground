@@ -185,6 +185,32 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   $ctrl.saveTabsToSessionStorage = function () {
     $ctrl.persistTabs();
   };
+
+  function getTabTitleFromQuery(queryText, tabIndex) {
+    const safeQuery = typeof queryText === 'string' ? queryText : '';
+    const queryWithoutComments = safeQuery
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/([^:]|^)\/\/.*$/gm, '$1')
+      .replace(/#.*/g, '');
+
+    const namedOperationMatch = /\b(query|mutation|subscription)\s+([^\(\{\}\)\s]+)/.exec(queryWithoutComments);
+    if (namedOperationMatch) {
+      return `${namedOperationMatch[1]} ${namedOperationMatch[2]}`;
+    }
+
+    const anonymousOperationMatch = /\b(query|mutation|subscription)\b\s*(\([^)]*\))?\s*\{([\s\S]*)\}/.exec(queryWithoutComments);
+    if (anonymousOperationMatch) {
+      const selectionBody = anonymousOperationMatch[3] || '';
+      const firstRootFieldMatch = /(^|[\s{])([A-Za-z_][A-Za-z0-9_]*)(?=\s*(\(|\{|@|$|\n))/m.exec(selectionBody);
+
+      if (firstRootFieldMatch && firstRootFieldMatch[2]) {
+        return firstRootFieldMatch[2];
+      }
+    }
+
+    return `${$ctrl.t('tabs.default')} ${tabIndex}`;
+  }
+
   $scope.$watch('$ctrl.tabs[$ctrl.activeTab].query', (newQuery) => {
     const activeTab = $ctrl.tabs[$ctrl.activeTab];
 
@@ -192,16 +218,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
       return;
     }
 
-    const safeQuery = typeof newQuery === 'string' ? newQuery : '';
-    const queryWithoutComments = safeQuery.replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '');
-    const nameMatcher = /(query|mutation)\s*([^\(\{\}\)\s]+)/
-    const match = nameMatcher.exec(queryWithoutComments);
-    if (match) {
-      activeTab.title = `${match[1]} ${match[2]}`;
-    }
-    else {
-      activeTab.title = `${$ctrl.t('tabs.default')} ${$ctrl.activeTab}`;
-    }
+    activeTab.title = getTabTitleFromQuery(newQuery, $ctrl.activeTab);
 
     $ctrl.persistTabs();
   });
