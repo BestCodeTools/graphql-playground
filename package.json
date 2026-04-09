@@ -1,12 +1,12 @@
 {
   "name": "@bestcodetools/graphql-playground",
-  "version": "1.0.2",
+  "version": "0.0.0_provenance",
   "main": "index.js",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc --outDir dist --rootDir src",
+    "build": "tsc --outDir dist",
     "start": "node dist/standalone.js",
     "standalone": "ts-node-dev --transpile-only src/standalone.ts",
     "transpile:sass:watch": "sass --watch public/styles:public/styles",
