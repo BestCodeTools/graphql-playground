@@ -818,7 +818,17 @@ td, th {
 .headers-editor .CodeMirror-sizer,
 .variables-editor .CodeMirror-lines,
 .headers-editor .CodeMirror-lines {
-  min-width: 100%;
+  min-width: 0;
+}
+
+.variables-editor .CodeMirror-scroll,
+.headers-editor .CodeMirror-scroll {
+  overflow-x: hidden !important;
+}
+
+.variables-editor .CodeMirror-hscrollbar,
+.headers-editor .CodeMirror-hscrollbar {
+  display: none !important;
 }
 
 .query-editor .CodeMirror-gutters {
