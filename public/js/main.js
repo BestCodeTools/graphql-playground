@@ -214,11 +214,12 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
   }
 
   function applyAutomaticTabTitle(tab, tabIndex) {
-    if (!tab || tab.hasManualTitle) {
+    if (!tab) {
       return;
     }
 
-    tab.title = getTabTitleFromQuery(tab.query, tabIndex);
+    const manualTitle = typeof tab.userDefinedLabel === 'string' ? tab.userDefinedLabel.trim() : '';
+    tab.title = manualTitle || getTabTitleFromQuery(tab.query, tabIndex);
   }
 
   $ctrl.beginTabTitleEdit = function (tabIndex, $event) {
@@ -235,7 +236,9 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
 
     $ctrl.activeTab = tabIndex;
     tab.isEditingTitle = true;
-    tab.titleDraft = tab.title || '';
+    tab.titleDraft = (typeof tab.userDefinedLabel === 'string' && tab.userDefinedLabel.trim())
+      ? tab.userDefinedLabel
+      : (tab.title || '');
 
     $timeout(() => {
       const input = document.getElementById(`tab-title-editor-${tab.id}`);
@@ -258,13 +261,8 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     const nextTitle = (tab.titleDraft || '').trim();
     tab.isEditingTitle = false;
 
-    if (nextTitle) {
-      tab.title = nextTitle;
-      tab.hasManualTitle = true;
-    } else {
-      tab.hasManualTitle = false;
-      tab.title = getTabTitleFromQuery(tab.query, tabIndex);
-    }
+    tab.userDefinedLabel = nextTitle || '';
+    applyAutomaticTabTitle(tab, tabIndex);
 
     delete tab.titleDraft;
     $ctrl.persistTabs();
@@ -322,6 +320,14 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
       id: tab.id || TabService.generateTabId(),
       isEditingTitle: false
     }));
+
+    storedTabs.forEach((tab) => {
+      if (typeof tab.userDefinedLabel !== 'string') {
+        tab.userDefinedLabel = tab.hasManualTitle ? (tab.title || '') : '';
+      }
+
+      delete tab.hasManualTitle;
+    });
 
     storedTabs.forEach((tab, index) => {
       applyAutomaticTabTitle(tab, index);
@@ -603,7 +609,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     const newTab = {
       id: TabService.generateTabId(),
       title: `${$ctrl.t('tabs.default')} ${$ctrl.tabs.length}`,
-      hasManualTitle: false,
+      userDefinedLabel: '',
       query: $ctrl.t('query.placeholder'),
       variables: '{}',
       headers: '{}',
