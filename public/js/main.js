@@ -211,6 +211,87 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     return `${$ctrl.t('tabs.default')} ${tabIndex}`;
   }
 
+  function applyAutomaticTabTitle(tab, tabIndex) {
+    if (!tab || tab.hasManualTitle) {
+      return;
+    }
+
+    tab.title = getTabTitleFromQuery(tab.query, tabIndex);
+  }
+
+  $ctrl.beginTabTitleEdit = function (tabIndex, $event) {
+    const tab = $ctrl.tabs[tabIndex];
+
+    if (!tab) {
+      return;
+    }
+
+    if ($event) {
+      $event.preventDefault();
+      $event.stopPropagation();
+    }
+
+    $ctrl.activeTab = tabIndex;
+    tab.isEditingTitle = true;
+    tab.titleDraft = tab.title || '';
+
+    $timeout(() => {
+      const input = document.getElementById(`tab-title-editor-${tab.id}`);
+      if (!input) {
+        return;
+      }
+
+      input.focus();
+      input.select();
+    }, 0);
+  };
+
+  $ctrl.commitTabTitleEdit = function (tabIndex) {
+    const tab = $ctrl.tabs[tabIndex];
+
+    if (!tab) {
+      return;
+    }
+
+    const nextTitle = (tab.titleDraft || '').trim();
+    tab.isEditingTitle = false;
+
+    if (nextTitle) {
+      tab.title = nextTitle;
+      tab.hasManualTitle = true;
+    } else {
+      tab.hasManualTitle = false;
+      tab.title = getTabTitleFromQuery(tab.query, tabIndex);
+    }
+
+    delete tab.titleDraft;
+    $ctrl.persistTabs();
+  };
+
+  $ctrl.cancelTabTitleEdit = function (tabIndex) {
+    const tab = $ctrl.tabs[tabIndex];
+
+    if (!tab) {
+      return;
+    }
+
+    tab.isEditingTitle = false;
+    delete tab.titleDraft;
+  };
+
+  $ctrl.handleTabTitleKeydown = function ($event, tabIndex) {
+    if ($event.key === 'Enter') {
+      $event.preventDefault();
+      $ctrl.commitTabTitleEdit(tabIndex);
+      return;
+    }
+
+    if ($event.key === 'Escape') {
+      $event.preventDefault();
+      $ctrl.cancelTabTitleEdit(tabIndex);
+    }
+  };
+
   $scope.$watch('$ctrl.tabs[$ctrl.activeTab].query', (newQuery) => {
     const activeTab = $ctrl.tabs[$ctrl.activeTab];
 
@@ -218,7 +299,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
       return;
     }
 
-    activeTab.title = getTabTitleFromQuery(newQuery, $ctrl.activeTab);
+    applyAutomaticTabTitle(activeTab, $ctrl.activeTab);
 
     $ctrl.persistTabs();
   });
@@ -236,8 +317,13 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     // Garante que cada aba tenha um ID único (evita duplicatas no ngRepeat)
     storedTabs = storedTabs.map(tab => ({
       ...tab,
-      id: tab.id || TabService.generateTabId()
+      id: tab.id || TabService.generateTabId(),
+      isEditingTitle: false
     }));
+
+    storedTabs.forEach((tab, index) => {
+      applyAutomaticTabTitle(tab, index);
+    });
 
     $ctrl.tabs = storedTabs;
     TabService.saveTabs($ctrl.tabs);
@@ -510,6 +596,7 @@ app.controller('MainController', ['$scope', '$timeout', 'TabService', 'I18nServi
     const newTab = {
       id: TabService.generateTabId(),
       title: `${$ctrl.t('tabs.default')} ${$ctrl.tabs.length}`,
+      hasManualTitle: false,
       query: $ctrl.t('query.placeholder'),
       variables: '{}',
       headers: '{}',

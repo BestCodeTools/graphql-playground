@@ -60,6 +60,21 @@ body.ready > * {
   color: #f4f4f4;
   text-decoration: none;
 }
+.tabs .tab-item .tab-title-input {
+  min-width: 120px;
+  width: 180px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid #4d7ea8;
+  background: #1f2329;
+  color: #f4f4f4;
+  font: inherit;
+  box-sizing: border-box;
+}
+.tabs .tab-item .tab-title-input:focus {
+  outline: none;
+  border-color: #4fc1ff;
+}
 .tabs .add-tab:hover, .tabs .tab-item:hover {
   box-shadow: 0 0 5px #20f020;
 }

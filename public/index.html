@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground</title>
-  <link rel="stylesheet" href="./styles/main.css?v=20260409f">
+  <link rel="stylesheet" href="./styles/main.css?v=20260409g">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.css">
@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/edit/matchbrackets.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-  <script src="./js/main.js?v=20260409f"></script>
+  <script src="./js/main.js?v=20260409g"></script>
   <script src="./js/components/config-editor.js?v=20260409c"></script>
   <script src="./js/components/query-editor.js?v=20260409s"></script>
   <script src="./js/components/variables-editor.js?v=20260409j"></script>
@@ -42,7 +42,16 @@
     </div>
     <div class="tabs">
       <div class="tab-item" ng-repeat="tab in main.tabs track by tab.id" ng-class="{ 'active': main.activeTab === $index }">
-        <a href="" ng-click="main.activeTab = $index">{{ tab.title }}</a>
+        <a href="" ng-if="!tab.isEditingTitle" ng-click="main.activeTab = $index" ng-dblclick="main.beginTabTitleEdit($index, $event)">{{ tab.title }}</a>
+        <input
+          ng-if="tab.isEditingTitle"
+          id="tab-title-editor-{{ tab.id }}"
+          class="tab-title-input"
+          type="text"
+          ng-model="tab.titleDraft"
+          ng-click="$event.stopPropagation()"
+          ng-blur="main.commitTabTitleEdit($index)"
+          ng-keydown="main.handleTabTitleKeydown($event, $index)">
       </div>
       <div class="add-tab">
         <a href="" ng-click="main.addTab()">+</a>

@@ -58,6 +58,21 @@ body.ready > * {
       color: #f4f4f4;
       text-decoration: none;
     }
+    .tab-title-input {
+      min-width: 120px;
+      width: 180px;
+      margin: 0;
+      padding: 4px 6px;
+      border: 1px solid #4d7ea8;
+      background: #1f2329;
+      color: #f4f4f4;
+      font: inherit;
+      box-sizing: border-box;
+      &:focus {
+        outline: none;
+        border-color: #4fc1ff;
+      }
+    }
     &:hover {
       >a {
         color: #20f020;
