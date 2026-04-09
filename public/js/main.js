@@ -800,6 +800,7 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
     sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, String($ctrl.activeTab || 0));
     sessionStorage.setItem('url', $ctrl.url);
     TabService.saveTabs($ctrl.tabs);
+    $ctrl.showConfig = false;
     loadSchema($ctrl.url);
     $ctrl.persistTabs();
 

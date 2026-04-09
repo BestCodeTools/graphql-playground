@@ -1,5 +1,5 @@
 ((app) => {
-  const TEMPLATE_VERSION = '20260409d';
+  const TEMPLATE_VERSION = '20260409e';
 
   app.component('configEditor', {
     templateUrl: `components/config-editor.html?v=${TEMPLATE_VERSION}`,
@@ -74,6 +74,23 @@
         }
 
         const reader = new FileReader();
+        const showImportErrorToast = function () {
+          if (typeof window !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function') {
+            window.Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'error',
+              title: $ctrl.getWorkspaceLabel('importError'),
+              showConfirmButton: false,
+              timer: 3500,
+              timerProgressBar: true
+            });
+            return;
+          }
+
+          window.alert($ctrl.getWorkspaceLabel('importError'));
+        };
+
         reader.onload = function (loadEvent) {
           try {
             const parsed = JSON.parse(loadEvent.target.result);
@@ -81,7 +98,7 @@
               $ctrl.importWorkspace({ workspace: parsed });
             }
           } catch (error) {
-            window.alert($ctrl.getWorkspaceLabel('importError'));
+            showImportErrorToast();
           } finally {
             if (input) {
               input.value = '';
@@ -89,7 +106,7 @@
           }
         };
         reader.onerror = function () {
-          window.alert($ctrl.getWorkspaceLabel('importError'));
+          showImportErrorToast();
           if (input) {
             input.value = '';
           }
