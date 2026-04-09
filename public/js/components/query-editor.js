@@ -1414,6 +1414,19 @@
         };
       }
 
+      function buildOperationNameApply(field) {
+        return function applyOperationNameCompletion(cm, from, to) {
+          const operationName = field && field.name ? field.name : '';
+
+          if (!operationName) {
+            return;
+          }
+
+          cm.replaceRange(operationName, from, to);
+          cm.setCursor(cm.posFromIndex(cm.indexFromPos(from) + operationName.length));
+        };
+      }
+
       function buildArgInsertion(arg) {
         return {
           text: `${arg.name}: `,
@@ -1587,8 +1600,15 @@
         const rootTypeName = getRootTypeName(schema, context.operation);
         const queryPrefix = queryText.slice(0, cursorIndex);
         const querySuffix = queryText.slice(cursorIndex);
-        const normalizedPrefix = queryPrefix.replace(/\/\*[\s\S]*?\*\//g, '').replace(/#.*/g, '').trim();
-        const normalizedSuffix = querySuffix.replace(/\/\*[\s\S]*?\*\//g, '').replace(/#.*/g, '').trim();
+        const cleanedPrefix = queryPrefix.replace(/\/\*[\s\S]*?\*\//g, '').replace(/#.*/g, '');
+        const cleanedSuffix = querySuffix.replace(/\/\*[\s\S]*?\*\//g, '').replace(/#.*/g, '');
+        const normalizedPrefix = cleanedPrefix.trim();
+        const normalizedSuffix = cleanedSuffix.trim();
+        const isOperationNameContext = !context.inArguments
+          && !context.inSelectionSet
+          && Boolean(rootTypeName)
+          && /\b(query|mutation|subscription)\s+[A-Za-z_]*$/i.test(cleanedPrefix)
+          && /^\s*(\([^{}]*\))?\s*\{/.test(cleanedSuffix);
         const isTopLevelRootSelection = !context.inArguments
           && !context.inSelectionSet
           && context.parentTypeName
@@ -1604,6 +1624,25 @@
           return getFieldCompletionsForType(schema, context.parentTypeName, {
             bindOperationVariables: context.parentTypeName === rootTypeName,
             operation: context.operation
+          });
+        }
+
+        if (isOperationNameContext && rootTypeName) {
+          return getFieldCompletionsForType(schema, rootTypeName, {
+            operation: context.operation
+          }).filter((completion) => !completion.includeAllFields).map((completion) => {
+            const operationName = completion.text.replace(/\(.*/, '');
+            const operationNameCompletion = { ...completion };
+            operationNameCompletion.text = operationName;
+            operationNameCompletion.displayText = operationName;
+            operationNameCompletion.apply = buildOperationNameApply({
+              name: operationName
+            });
+            delete operationNameCompletion.wrapInOperation;
+            delete operationNameCompletion.bindOperationVariables;
+            delete operationNameCompletion.includeAllFields;
+            delete operationNameCompletion.cursorOffset;
+            return operationNameCompletion;
           });
         }
 
