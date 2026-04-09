@@ -1,0 +1,74 @@
+<div class="schema-viewer-wrapper" ng-class="{ 'open': $ctrl.open }">
+  <button class="btn btn-toggle-schema-viewer" ng-click="$ctrl.toggleSchemaViewer()">Schema</button>
+  <div class="schema-viewer-error" ng-show="$ctrl.loadError">
+    <div>
+      {{ $ctrl.t('schema.error') }}
+    </div>
+    <div class="error-details">
+      {{ $ctrl.loadError }}
+    </div>
+    <button class="btn schema-download-retry" ng-click="$ctrl.retryLoadSchema()">{{ $ctrl.t('schema.retry') }}</button>
+  </div>
+  <div class="schema-viewer-panel">
+    <div class="editor-panel-title schema-panel-title">
+      <span>{{ $ctrl.t('schema.title') }}</span>
+    </div>
+    <div class="schema-panel-toolbar">
+      <input type="text" class="schema-search-input" ng-model="$ctrl.searchTerm" placeholder="{{ $ctrl.t('schema.search_placeholder') }}">
+      <div class="schema-panel-note">{{ $ctrl.t('schema.note') }}</div>
+    </div>
+    <div class="schema-panel-body">
+      <div class="type-definition" id="{{type.kind}}_{{type.name||type.ofType.name}}" 
+       ng-repeat="type in $ctrl.getFilteredTypes() track by (type.kind + '_' + type.name)">
+        <div ng-if="type.kind === 'OBJECT'">
+          <span class="keyword">type</span> {{ type.name }} <span class="bracket">{</span>
+          <div class="field" ng-repeat="field in type.fields" ng-if="$ctrl.shouldShowField(type, field)">
+             <span class="field-name" ng-class="{ 'is-actionable': $ctrl.getOperationForType(type.name) }" ng-mousedown="$ctrl.onFieldMouseDown($event, type, field)" ng-mouseover="$ctrl.showFieldTooltip($event, field)" ng-mouseout="$ctrl.hideTooltip()">{{ field.name }}</span><field-args field-args="field.args" on-show-tooltip="$ctrl.forwardTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-args><span class="colon">:</span> <field-type field-ref="field" on-show-tooltip="$ctrl.forwardTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-type>
+              <!--<span ng-if="field.type.kind==='LIST'" class="array-bracket">[</span><a href="#{{field.type.kind}}_{{field.type.name}}" ng-click="$ctrl.onTypeAnchorClick($event)"><span class="field-type">{{ field.type.name || field.type.ofType.name }}</span></a><span ng-if="field.type.kind==='LIST'" class="array-bracket">]</span> -->
+          </div>
+          <span class="bracket">}</span>
+        </div>
+        <div ng-if="type.kind === 'ENUM'">
+          <span class="keyword">enum</span> {{ type.name }} <span class="bracket">{</span>
+          <div class="field" ng-repeat="value in type.enumValues">
+            <span class="enum-name" ng-mouseover="$ctrl.showEnumTooltip($event, value)" ng-mouseout="$ctrl.hideTooltip()">{{ value.name }}</span>
+          </div>
+          <span class="bracket">}</span>
+        </div>
+        <div ng-if="type.kind === 'INTERFACE'">
+          <span class="keyword">interface</span> {{ type.name }} <span class="bracket">{</span>
+          <div class="field" ng-repeat="field in type.fields" ng-if="$ctrl.shouldShowField(type, field)">
+            <span class="field-name" ng-class="{ 'is-actionable': $ctrl.getOperationForType(type.name) }" ng-mousedown="$ctrl.onFieldMouseDown($event, type, field)" ng-mouseover="$ctrl.showFieldTooltip($event, field)" ng-mouseout="$ctrl.hideTooltip()">{{ field.name }}</span><field-args field-args="field.args" on-show-tooltip="$ctrl.forwardTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-args><span class="colon">:</span> <field-type field-ref="field" on-show-tooltip="$ctrl.forwardTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-type>
+          </div>
+          <span class="bracket">}</span>
+        </div>
+        <div ng-if="type.kind === 'UNION'">
+          <span class="keyword">union</span> {{ type.name }} <span class="equal">=</span>
+          <div class="field" ng-repeat="possibleType in type.possibleTypes" ng-if="$ctrl.shouldShowField(type, possibleType)">
+            <span class="field-name" ng-mouseover="$ctrl.showPossibleTypeTooltip($event, possibleType)" ng-mouseout="$ctrl.hideTooltip()">{{ possibleType.name }}</span>
+          </div>
+        </div>
+        <div ng-if="type.kind === 'INPUT_OBJECT'">
+          <span class="keyword">input</span> {{ type.name }} <span class="bracket">{</span>
+          <div class="field" ng-repeat="inputField in type.inputFields" ng-if="$ctrl.shouldShowField(type, inputField)">
+            <span class="field-name" ng-mouseover="$ctrl.showInputFieldTooltip($event, inputField)" ng-mouseout="$ctrl.hideTooltip()">{{ inputField.name }}</span><span class="colon">:</span> <field-type field-ref="inputField" on-show-tooltip="$ctrl.forwardTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-type>
+          </div>
+          <span class="bracket">}</span>
+        </div>
+        <div ng-if="type.kind === 'SCALAR'">
+          <span class="keyword">scalar</span> {{ type.name }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="schema-tooltip" ng-if="$ctrl.tooltip.visible" ng-style="{ top: $ctrl.tooltip.top + 'px', left: $ctrl.tooltip.left + 'px' }">
+    <div class="schema-tooltip-signature">
+      <span class="schema-tooltip-name schema-tooltip-name-{{ $ctrl.tooltip.labelClass }}">{{ $ctrl.tooltip.label }}</span>
+      <span class="colon" ng-if="$ctrl.tooltip.typeTokens.length">:</span>
+      <span class="schema-tooltip-type-tokens" ng-if="$ctrl.tooltip.typeTokens.length">
+        <span ng-repeat="token in $ctrl.tooltip.typeTokens track by $index" class="{{ token.className }}">{{ token.text }}</span>
+      </span>
+    </div>
+    <div class="schema-tooltip-description" ng-if="$ctrl.tooltip.description">{{ $ctrl.tooltip.description }}</div>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+<div class="field-args" ng-if="$ctrl.hasArgs()">
+  <span class="field-args-paren">(</span>
+  <span class="field-arg" ng-repeat="arg in $ctrl.fieldArgs track by arg.name || $index">
+    <span class="field-arg-name" ng-mouseover="$ctrl.showArgTooltip($event, arg)" ng-mouseout="$ctrl.hideTooltip()" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()">{{ arg.name }}</span>
+    <span class="colon">:</span>
+    <field-type field-ref="arg" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()"></field-type>
+    <span class="field-arg-default" ng-if="arg.defaultValue">
+      <span class="equal">=</span> {{ arg.defaultValue }}
+    </span>
+    <span class="field-arg-description" ng-if="arg.description" ng-mouseover="$ctrl.showArgTooltip($event, arg)" ng-mouseout="$ctrl.hideTooltip()" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()">
+      {{ arg.description }}
+    </span>
+    <span class="field-arg-separator" ng-if="!$last">, </span>
+  </span>
+  <span class="field-args-paren">)</span>
+</div>

@@ -1,0 +1,27 @@
+<span class="field-type-wrapper" ng-if="$ctrl.getTypeRef()">
+  <span ng-if="$ctrl.isListType($ctrl.getTypeRef())">
+    <span class="field-type-prefix">[</span>
+    <field-type field-ref="$ctrl.getTypeRef().ofType" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.forwardHideTooltip()"></field-type>
+    <span class="field-type-suffix">]</span>
+  </span>
+  <span ng-if="$ctrl.isNonNullType($ctrl.getTypeRef())">
+    <field-type field-ref="$ctrl.getTypeRef().ofType" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.forwardHideTooltip()"></field-type>
+    <span class="field-type-non-null">!</span>
+  </span>
+  <span ng-if="!$ctrl.isListType($ctrl.getTypeRef()) && !$ctrl.isNonNullType($ctrl.getTypeRef()) && $ctrl.hasNavigableType($ctrl.getTypeRef())">
+    <a
+      class="field-type-link"
+      href="#{{ $ctrl.getTypeAnchor($ctrl.getTypeRef()) }}"
+      ng-click="$ctrl.onTypeAnchorClick($event)"
+      ng-mouseover="$ctrl.showTooltip($event)"
+      ng-mouseout="$ctrl.hideTooltip()"
+      on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)"
+      on-hide-tooltip="$ctrl.hideTooltip()"
+    >
+      <span class="field-type">{{ $ctrl.getTypeLabel($ctrl.getTypeRef()) }}</span>
+    </a>
+  </span>
+  <span class="field-type" ng-if="!$ctrl.isListType($ctrl.getTypeRef()) && !$ctrl.isNonNullType($ctrl.getTypeRef()) && !$ctrl.hasNavigableType($ctrl.getTypeRef())" ng-mouseover="$ctrl.showTooltip($event)" ng-mouseout="$ctrl.hideTooltip()" on-show-tooltip="$ctrl.forwardShowTooltip($event, payload)" on-hide-tooltip="$ctrl.hideTooltip()">
+    {{ $ctrl.getTypeLabel($ctrl.getTypeRef()) }}
+  </span>
+</span>

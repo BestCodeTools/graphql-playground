@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="app">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playground</title>
+  <link rel="stylesheet" href="./styles/main.css?v=20260409f">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <script src="./js/main.js?v=20260409d"></script>
+  <script src="./js/components/config-editor.js?v=20260409c"></script>
+  <script src="./js/components/query-editor.js?v=20260409q"></script>
+  <script src="./js/components/variables-editor.js?v=20260409j"></script>
+  <script src="./js/components/headers-editor.js?v=20260409h"></script>
+  <script src="./js/components/schema-viewer.js?v=20260409g"></script>
+</head>
+<body ng-class="{ 'ready': main.ready }" ng-controller="MainController as main">
+  <nav class="top-nav">
+    <div class="top-nav-brand">
+      <div class="top-nav-title-row">
+        <div class="top-nav-title">{{ main.t('app.name') }}</div>
+        <span class="top-nav-badge">{{ main.appVersion }}</span>
+      </div>
+      <div class="top-nav-subtitle">{{ main.t('app.developed_by') }}</div>
+    </div>
+    <div class="top-nav-actions">
+      <label class="locale-label" for="locale-select">{{ main.t('nav.language') }}</label>
+      <select id="locale-select" class="locale-select" ng-model="main.locale" ng-change="main.setLocale(main.locale)" ng-options="locale.code as main.t(locale.labelKey) for locale in main.locales"></select>
+      <button class="config-btn" ng-click="main.openConfig()">{{ main.t('nav.settings') }}</button>
+    </div>
+  </nav>
+
+  <div class="editor">
+    <div class="input-group">
+      <input class="form-control" type="text" ng-model="main.url" placeholder="URL">
+      <button ng-click="main.send()">{{ main.t('actions.send') }}</button>
+    </div>
+    <div class="tabs">
+      <div class="tab-item" ng-repeat="tab in main.tabs track by tab.id" ng-class="{ 'active': main.activeTab === $index }">
+        <a href="" ng-click="main.activeTab = $index">{{ tab.title }}</a>
+      </div>
+      <div class="add-tab">
+        <a href="" ng-click="main.addTab()">+</a>
+      </div>
+    </div>
+    <div class="tab-content" ng-repeat="tab in main.tabs" ng-show="main.activeTab === $index">
+      <div class="query-and-result-container">
+        <div class="query-editor">
+          <div class="editor-panel-title">
+            <span>{{ main.t('editor.query') }}</span>
+            <span class="editor-panel-actions">
+              <button type="button" class="editor-panel-action" ng-click="tab.queryEditorApi && tab.queryEditorApi.resetToOperation('query')">{{ main.t('actions.new_query') }}</button>
+              <button type="button" class="editor-panel-action" ng-click="tab.queryEditorApi && tab.queryEditorApi.resetToOperation('mutation')">{{ main.t('actions.new_mutation') }}</button>
+            </span>
+          </div>
+          <query-editor query="tab.query" schema="main.schema" api="tab.queryEditorApi" on-change="main.persistTabs()"></query-editor>
+        </div>
+        <div class="actions">
+          <button ng-click="main.send()">{{ main.t('actions.send') }}</button>
+        </div>
+        <div class="result">
+          <div class="editor-panel-title">{{ main.t('editor.response') }}</div>
+          <pre>{{ tab.result }}</pre>
+        </div>
+      </div>
+      <div class="variables-and-headers-container">
+        <div class="variables-editor">
+          <div class="editor-panel-title">
+            <span>{{ main.t('editor.variables') }}</span>
+            <button type="button" class="editor-panel-action" ng-click="tab.variablesEditorApi && tab.variablesEditorApi.format()">{{ main.t('actions.format') }}</button>
+          </div>
+          <variables-editor variables="tab.variables" query="tab.query" schema="main.schema" api="tab.variablesEditorApi" on-change="main.persistTabs()"></variables-editor>
+        </div>
+        <div class="headers-editor">
+          <div class="editor-panel-title">
+            <span>{{ main.t('editor.headers') }}</span>
+            <button type="button" class="editor-panel-action" ng-click="tab.headersEditorApi && tab.headersEditorApi.format()">{{ main.t('actions.format') }}</button>
+          </div>
+          <headers-editor headers="tab.headers" api="tab.headersEditorApi" on-change="main.persistTabs()"></headers-editor>
+        </div>
+      </div>
+    </div>
+  </div>
+  <schema-viewer schema="main.schema" load-error="main.loadSchemaError" retry-load-schema="main.loadSchema()" insert-schema-operation="main.insertSchemaOperation(snippet)"></schema-viewer>
+  <div class="modal-overlay" ng-show="main.showConfig"></div>
+  <div class="modal config-modal" ng-show="main.showConfig">
+    <div class="modal-content">
+      <h2>{{ main.t('modal.settings') }}</h2>
+      <config-editor></config-editor>
+      <button class="close-btn" ng-click="main.closeConfig()">{{ main.t('actions.close') }}</button>
+    </div>
+  </div>
+</body>
+</html>

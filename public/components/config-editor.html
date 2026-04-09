@@ -1,0 +1,32 @@
+<div class="config-tabs">
+  <div class="tab-item" ng-repeat="tab in $ctrl.tabs track by tab.id"
+       ng-class="{ 'active': $ctrl.activeTab === tab.id }"
+       ng-click="$ctrl.setActiveTab(tab.id)">
+    {{ $ctrl.t(tab.titleKey) }}
+  </div>
+</div>
+<div class="config-content">
+  <div ng-if="$ctrl.activeTab === 'headers'">
+    <h3>{{ $ctrl.t('config.shared_headers') }}</h3>
+    <table class="headers-table">
+      <thead>
+        <tr>
+          <th class="property-name">{{ $ctrl.t('config.property') }}</th>
+          <th class="property-value">{{ $ctrl.t('config.value') }}</th>
+          <th class="remove-action"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="header in $ctrl.headers">
+          <td class="property-name"><input placeholder="{{ $ctrl.t('config.key_placeholder') }}" type="text" ng-model="header.key"></td>
+          <td class="property-value"><input placeholder="{{ $ctrl.t('config.value_placeholder') }}" type="text" ng-model="header.value"></td>
+          <td class="remove-action"><button ng-click="$ctrl.removeHeader($index)">🗑️</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button ng-click="$ctrl.addHeader()">{{ $ctrl.t('config.add_header') }}</button>
+  </div>
+  <div ng-if="$ctrl.activeTab === 'other'">
+    <h3>{{ $ctrl.t('config.other_placeholder') }}</h3>
+  </div>
+</div>
