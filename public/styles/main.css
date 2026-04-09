@@ -171,6 +171,7 @@ body.ready > * {
   position: absolute;
   left: calc(50% - 30px);
   top: calc(50% - 30px);
+  z-index: 3;
 }
 .query-and-result-container .actions button {
   border-radius: 100%;
@@ -192,6 +193,8 @@ body.ready > * {
   color: #f4f4f4;
   overflow: hidden;
   width: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .result pre {
