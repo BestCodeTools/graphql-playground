@@ -377,22 +377,20 @@ response-viewer {
   min-height: 0;
 }
 
-.response-viewer-container .CodeMirror-scroll,
-.response-viewer-container .CodeMirror-sizer,
-.response-viewer-container .CodeMirror-lines,
-.response-viewer-container .CodeMirror-code {
-  min-width: 100%;
+.response-viewer-container .CodeMirror-scroll {
+  overflow-x: hidden !important;
+  flex: 1 1 auto;
   background-color: #1e1e1e !important;
 }
 
-.response-viewer-container .CodeMirror-scroll {
-  width: 100% !important;
-  flex: 1 1 auto;
+.response-viewer-container .CodeMirror-sizer,
+.response-viewer-container .CodeMirror-lines,
+.response-viewer-container .CodeMirror-code {
+  background-color: #1e1e1e !important;
 }
 
-.response-viewer-container .CodeMirror-sizer,
-.response-viewer-container .CodeMirror-lines {
-  width: 100% !important;
+.response-viewer-container .CodeMirror-hscrollbar {
+  display: none !important;
 }
 
 .response-viewer-container .CodeMirror-gutters {
