@@ -6,6 +6,8 @@
     "access": "public"
   },
   "scripts": {
+    "build": "tsc --outDir dist --rootDir src",
+    "start": "node dist/standalone.js",
     "standalone": "ts-node-dev --transpile-only src/standalone.ts",
     "transpile:sass:watch": "sass --watch public/styles:public/styles",
     "test": "jest"
