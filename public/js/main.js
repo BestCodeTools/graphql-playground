@@ -431,7 +431,7 @@ app.factory('TabService', ['AppState', function (state) {
   };
 }]);
 
-app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService', 'I18nService', 'CurlImportService', function ($scope, $timeout, AppState, TabService, I18nService, CurlImportService) {
+app.controller('MainController', ['$scope', '$timeout', '$http', 'AppState', 'TabService', 'I18nService', 'CurlImportService', function ($scope, $timeout, $http, AppState, TabService, I18nService, CurlImportService) {
   const $ctrl = this;
   const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
   const SHARED_HEADERS_STORAGE_KEY = 'sharedHeaders';
@@ -440,7 +440,7 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
   $ctrl.title = 'AngularJS Tutorial Example';
   $ctrl.message = 'Hello World!';
   $ctrl.ready = true;
-  $ctrl.appVersion = 'v1.0.2';
+  $ctrl.appVersion = '';
   $ctrl.locales = I18nService.getLocales();
   $ctrl.locale = I18nService.getLocale();
   $ctrl.t = function (key) {
@@ -450,6 +450,12 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
   $ctrl.activeTab = 0;
   $ctrl.schema = null;
   $ctrl.loadSchemaError = null;
+  $http.get('./config.json').then(function (response) {
+    if (response.data && response.data.appVersion) {
+      $ctrl.appVersion = response.data.appVersion;
+    }
+  });
+
   function getDefaultGraphqlUrl() {
     if (typeof window === 'undefined' || !window.location) {
       return 'http://localhost:4000/graphql';
