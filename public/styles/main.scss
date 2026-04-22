@@ -836,6 +836,83 @@ td, th {
   border-right: 1px solid #333 !important;
 }
 
+.query-editor .graphql-fold-gutter {
+  width: 18px;
+  background-color: #252526;
+}
+
+.graphql-fold-gutter-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: #858585;
+  font-size: .75rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.graphql-fold-gutter-marker:hover {
+  color: #d7ecff;
+  background: transparent;
+}
+
+.graphql-fold-widget {
+  display: inline-flex;
+  align-items: center;
+  height: 1.35em;
+  padding: 0 .35rem;
+  border: 1px solid #4d7ea8;
+  border-radius: 4px;
+  background: #1f3850;
+  color: #d7ecff;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: .86em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.graphql-fold-widget:hover {
+  background: #274766;
+  border-color: #4fc1ff;
+}
+
+.graphql-fold-preview {
+  position: fixed;
+  z-index: 1300;
+  width: 440px;
+  max-width: calc(100vw - 24px);
+  max-height: 220px;
+  margin: 0;
+  padding: .7rem .85rem;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(20, 24, 31, 0.98);
+  border: 1px solid #3a4552;
+  border-radius: 8px;
+  color: #d4d4d4;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: .82rem;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.graphql-fold-preview.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .query-editor .CodeMirror-linenumber {
   color: #858585 !important;
 }
