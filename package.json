@@ -1,6 +1,6 @@
 {
   "name": "@bestcodetools/graphql-playground",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A standalone GraphQL Playground package with a custom dark UI, schema explorer, smart editors, workspace import/export, and Docker support.",
   "keywords": [],
   "homepage": "https://github.com/BestCodeTools/graphql-playground#readme",

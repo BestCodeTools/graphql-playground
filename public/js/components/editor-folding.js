@@ -95,21 +95,34 @@
     }
 
     function getPreviewText(range) {
-      const content = editor.getRange(
+      const rawContent = editor.getRange(
         { line: range.from.line, ch: range.from.ch + 1 },
         range.to
-      ).trim();
+      );
+      const lines = rawContent.replace(/\r\n?/g, '\n').split('\n');
 
-      if (!content) {
+      while (lines.length && !lines[0].trim()) {
+        lines.shift();
+      }
+
+      while (lines.length && !lines[lines.length - 1].trim()) {
+        lines.pop();
+      }
+
+      if (!lines.length) {
         return '';
       }
 
-      const lines = content
-        .split(/\r?\n/)
-        .map((line) => line.trimEnd())
+      const commonIndent = lines
         .filter((line) => line.trim())
+        .reduce((minimum, line) => {
+          const indentLength = (/^\s*/.exec(line) || [''])[0].length;
+          return Math.min(minimum, indentLength);
+        }, Infinity);
+      const normalizedLines = lines
+        .map((line) => line.slice(Number.isFinite(commonIndent) ? commonIndent : 0).trimEnd())
         .slice(0, 12);
-      const preview = lines.join('\n');
+      const preview = normalizedLines.join('\n');
 
       return preview.length > 520 ? `${preview.slice(0, 520)}...` : preview;
     }
@@ -187,7 +200,7 @@
       marker.type = 'button';
       marker.className = 'graphql-fold-gutter-marker';
       marker.textContent = isFolded ? '▸' : '▾';
-      marker.title = isFolded ? 'Expand block' : 'Collapse block';
+      marker.setAttribute('aria-label', isFolded ? 'Expand block' : 'Collapse block');
       return marker;
     }
 
@@ -232,7 +245,7 @@
 
       widget.className = 'graphql-fold-widget';
       widget.textContent = range.label;
-      widget.title = 'Expand block';
+      widget.setAttribute('aria-label', 'Expand block');
       widget.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
