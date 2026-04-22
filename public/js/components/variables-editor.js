@@ -15,6 +15,7 @@
       let editor = null;
       let tooltipElement = null;
       let hideTooltipTimeout = null;
+      let folding = null;
       let resizeHandler = null;
 
       function ensureVariablesMode() {
@@ -1126,6 +1127,7 @@
           lineNumbers: true,
           lineWrapping: true,
           matchBrackets: true,
+          gutters: ['CodeMirror-linenumbers', window.GraphqlPlaygroundEditorFolding.FOLD_GUTTER],
           indentUnit: 2,
           tabSize: 2,
           extraKeys: {
@@ -1139,11 +1141,17 @@
             },
             'Ctrl-Space'(cm) {
               triggerAutocomplete(cm);
+            },
+            'Ctrl-Q'() {
+              if (folding) {
+                folding.toggleAtCursor();
+              }
             }
           }
         });
 
         editor.setValue($ctrl.variables || '{}');
+        folding = window.GraphqlPlaygroundEditorFolding.createBlockFolding(editor);
 
         editor.on('change', (instance) => {
           const nextValue = instance.getValue();
@@ -1161,6 +1169,10 @@
           const rootScope = $element.scope();
           if (rootScope && !rootScope.$$phase) {
             rootScope.$applyAsync();
+          }
+
+          if (folding) {
+            folding.scheduleRefresh();
           }
         });
 
@@ -1188,6 +1200,9 @@
         window.requestAnimationFrame(() => {
           if (editor) {
             editor.refresh();
+            if (folding) {
+              folding.refresh();
+            }
           }
         });
       }
@@ -1212,8 +1227,14 @@
 
         if (editor.getValue() !== nextValue) {
           const cursor = editor.getCursor();
+          if (folding) {
+            folding.clear();
+          }
           editor.setValue(nextValue);
           editor.setCursor(cursor);
+          if (folding) {
+            folding.scheduleRefresh();
+          }
         }
       };
 
@@ -1229,8 +1250,14 @@
         }
 
         const cursor = editor.getCursor();
+        if (folding) {
+          folding.clear();
+        }
         editor.setValue(nextValue);
         editor.setCursor(cursor);
+        if (folding) {
+          folding.scheduleRefresh();
+        }
       };
 
       $ctrl.$onDestroy = function () {
@@ -1240,6 +1267,10 @@
         }
         if (editor) {
           hideTooltip();
+          if (folding) {
+            folding.destroy();
+            folding = null;
+          }
           editor.toTextArea();
           editor = null;
         }

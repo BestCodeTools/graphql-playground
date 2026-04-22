@@ -836,7 +836,9 @@ td, th {
   border-right: 1px solid #333 !important;
 }
 
-.query-editor .graphql-fold-gutter {
+.query-editor .graphql-fold-gutter,
+.variables-editor .graphql-fold-gutter,
+.headers-editor .graphql-fold-gutter {
   width: 18px;
   background-color: #252526;
 }
