@@ -14,7 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-  <script src="./js/main.js?v=20260409p"></script>
+  <script src="./js/main.js?v=20260422a"></script>
   <script src="./js/components/config-editor.js?v=20260409e"></script>
   <script src="./js/components/query-editor.js?v=20260409t"></script>
   <script src="./js/components/variables-editor.js?v=20260409k"></script>
@@ -41,6 +41,7 @@
   <div class="editor">
     <div class="input-group">
       <input class="form-control" type="text" ng-model="main.url" placeholder="URL">
+      <button type="button" ng-click="main.openCurlImport()">{{ main.t('actions.import_curl') }}</button>
       <button ng-click="main.send()">{{ main.t('actions.send') }}</button>
     </div>
     <div class="tabs">
