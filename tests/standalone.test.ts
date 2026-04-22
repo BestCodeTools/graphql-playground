@@ -2,6 +2,8 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 
+const packageJson = require('../package.json') as { version: string };
+
 describe('standalone playground server', () => {
   let server: Server;
 
@@ -37,15 +39,15 @@ describe('standalone playground server', () => {
     });
   });
 
-  it('serves the configured playground path with status 200', async () => {
+  function requestPlaygroundPath(path: string) {
     const address = server.address() as AddressInfo;
 
-    const response = await new Promise<{ statusCode?: number; body: string }>((resolve, reject) => {
+    return new Promise<{ statusCode?: number; body: string }>((resolve, reject) => {
       const request = http.request(
         {
           hostname: '127.0.0.1',
           port: address.port,
-          path: '/playground/',
+          path,
           method: 'GET'
         },
         (result) => {
@@ -67,8 +69,21 @@ describe('standalone playground server', () => {
       request.on('error', reject);
       request.end();
     });
+  }
+
+  it('serves the configured playground path with status 200', async () => {
+    const response = await requestPlaygroundPath('/playground/');
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('<!DOCTYPE html>');
+  });
+
+  it('serves the package version through the playground config', async () => {
+    const response = await requestPlaygroundPath('/playground/config.json');
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      appVersion: `v${packageJson.version}`
+    });
   });
 });
