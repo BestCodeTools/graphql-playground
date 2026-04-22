@@ -30,6 +30,7 @@ app.factory('I18nService', ['AppState', function (AppState) {
       'actions.send': 'Send',
       'actions.close': 'Close',
       'actions.format': 'Format',
+      'actions.import_curl': 'Import cURL',
       'actions.new_query': 'New Query',
       'actions.new_mutation': 'New Mutation',
       'modal.settings': 'Settings',
@@ -55,6 +56,10 @@ app.factory('I18nService', ['AppState', function (AppState) {
       'workspace.import': 'Import Workspace',
       'workspace.note': 'Export and import your full workspace, including tabs and settings.',
       'workspace.import_error': 'Could not import this workspace file.',
+      'curl.import_title': 'Import cURL',
+      'curl.import_placeholder': 'Paste a cURL command copied from your browser or terminal',
+      'curl.import_confirm': 'Import',
+      'curl.import_error': 'Could not import this cURL command.',
       'workspace.token_placeholder': '[your token here]',
       'workspace.key_placeholder': '[your key here]',
       'query.placeholder': '/* Type your query here */'
@@ -69,6 +74,7 @@ app.factory('I18nService', ['AppState', function (AppState) {
       'actions.send': 'Enviar',
       'actions.close': 'Fechar',
       'actions.format': 'Formatar',
+      'actions.import_curl': 'Importar cURL',
       'actions.new_query': 'Nova Query',
       'actions.new_mutation': 'Nova Mutation',
       'modal.settings': 'Configurações',
@@ -90,6 +96,10 @@ app.factory('I18nService', ['AppState', function (AppState) {
       'config.value_placeholder': 'Valor',
       'config.add_header': '+ Adicionar Header',
       'config.other_placeholder': 'Outras Configurações (placeholder)',
+      'curl.import_title': 'Importar cURL',
+      'curl.import_placeholder': 'Cole um comando cURL copiado do navegador ou terminal',
+      'curl.import_confirm': 'Importar',
+      'curl.import_error': 'Não foi possível importar este comando cURL.',
       'query.placeholder': '/* Digite sua query aqui */'
     }
   };
@@ -125,6 +135,284 @@ app.factory('I18nService', ['AppState', function (AppState) {
     }
   };
 }]);
+// Serviços da aplicação
+app.factory('CurlImportService', function () {
+  const HEADER_OPTIONS = new Set(['-H', '--header']);
+  const DATA_OPTIONS = new Set(['-d', '--data', '--data-raw', '--data-binary', '--data-ascii', '--data-urlencode']);
+  const METHOD_OPTIONS = new Set(['-X', '--request']);
+  const URL_OPTIONS = new Set(['--url']);
+  const VALUE_OPTIONS = new Set([
+    ...HEADER_OPTIONS,
+    ...DATA_OPTIONS,
+    ...METHOD_OPTIONS,
+    ...URL_OPTIONS,
+    '-A',
+    '--user-agent',
+    '-b',
+    '--cookie',
+    '-u',
+    '--user',
+    '--connect-timeout',
+    '--max-time',
+    '--proxy',
+    '--referer'
+  ]);
+
+  function normalizeShellLines(input) {
+    const text = String(input || '').replace(/\r\n?/g, '\n');
+    let normalized = '';
+    let quote = null;
+    let escaped = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+
+      if (escaped) {
+        normalized += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && quote !== "'") {
+        if (!quote && text[index + 1] === '\n') {
+          normalized += ' ';
+          index += 1;
+          continue;
+        }
+
+        escaped = true;
+        normalized += char;
+        continue;
+      }
+
+      if ((char === '"' || char === "'") && !quote) {
+        quote = char;
+      } else if (char === quote) {
+        quote = null;
+      }
+
+      normalized += char === '\n' && !quote ? ' ' : char;
+    }
+
+    return normalized;
+  }
+
+  function tokenizeShell(input) {
+    const text = normalizeShellLines(input);
+    const tokens = [];
+    let current = '';
+    let quote = null;
+    let escaped = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && quote !== "'") {
+        escaped = true;
+        continue;
+      }
+
+      if (quote) {
+        if (char === quote) {
+          quote = null;
+        } else {
+          current += char;
+        }
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        quote = char;
+        continue;
+      }
+
+      if (/\s/.test(char)) {
+        if (current) {
+          tokens.push(current);
+          current = '';
+        }
+        continue;
+      }
+
+      current += char;
+    }
+
+    if (escaped) {
+      current += '\\';
+    }
+
+    if (quote) {
+      throw new Error('Unclosed quote in cURL command.');
+    }
+
+    if (current) {
+      tokens.push(current);
+    }
+
+    return tokens;
+  }
+
+  function readOptionValue(tokens, index, option) {
+    const token = tokens[index];
+    const inlinePrefix = `${option}=`;
+
+    if (token.startsWith(inlinePrefix)) {
+      return {
+        value: token.slice(inlinePrefix.length),
+        nextIndex: index
+      };
+    }
+
+    if (tokens[index + 1] == null || tokens[index + 1].startsWith('-')) {
+      return {
+        value: '',
+        nextIndex: index
+      };
+    }
+
+    return {
+      value: tokens[index + 1],
+      nextIndex: index + 1
+    };
+  }
+
+  function splitHeader(headerText) {
+    const separatorIndex = String(headerText || '').indexOf(':');
+
+    if (separatorIndex === -1) {
+      return null;
+    }
+
+    const name = headerText.slice(0, separatorIndex).trim();
+    const value = headerText.slice(separatorIndex + 1).trim();
+
+    return name ? { name, value } : null;
+  }
+
+  function isUrlToken(token) {
+    return /^https?:\/\//i.test(String(token || ''));
+  }
+
+  function parseBody(dataParts) {
+    const bodyText = dataParts.join('&').trim();
+
+    if (!bodyText) {
+      return {
+        query: '',
+        variables: '{}'
+      };
+    }
+
+    try {
+      const parsed = JSON.parse(bodyText);
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return {
+          query: typeof parsed.query === 'string' ? parsed.query : '',
+          variables: JSON.stringify(parsed.variables && typeof parsed.variables === 'object' ? parsed.variables : {}, null, 2)
+        };
+      }
+    } catch (error) {
+      // Non-JSON bodies are still useful as a paste source for the query editor.
+    }
+
+    return {
+      query: bodyText,
+      variables: '{}'
+    };
+  }
+
+  function parse(input) {
+    const tokens = tokenizeShell(input);
+
+    if (!tokens.length || tokens[0].toLowerCase() !== 'curl') {
+      throw new Error('Expected a cURL command.');
+    }
+
+    const headers = {};
+    const dataParts = [];
+    let url = '';
+    let method = '';
+
+    for (let index = 1; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      const optionName = token.includes('=') ? token.slice(0, token.indexOf('=')) : token;
+
+      if (HEADER_OPTIONS.has(optionName)) {
+        const option = readOptionValue(tokens, index, optionName);
+        const header = splitHeader(option.value);
+
+        if (header) {
+          headers[header.name] = header.value;
+        }
+
+        index = option.nextIndex;
+        continue;
+      }
+
+      if (DATA_OPTIONS.has(optionName)) {
+        const option = readOptionValue(tokens, index, optionName);
+
+        if (option.value) {
+          dataParts.push(option.value);
+        }
+
+        index = option.nextIndex;
+        continue;
+      }
+
+      if (METHOD_OPTIONS.has(optionName)) {
+        const option = readOptionValue(tokens, index, optionName);
+        method = option.value.toUpperCase();
+        index = option.nextIndex;
+        continue;
+      }
+
+      if (URL_OPTIONS.has(optionName)) {
+        const option = readOptionValue(tokens, index, optionName);
+        url = option.value;
+        index = option.nextIndex;
+        continue;
+      }
+
+      if (VALUE_OPTIONS.has(optionName)) {
+        const option = readOptionValue(tokens, index, optionName);
+        index = option.nextIndex;
+        continue;
+      }
+
+      if (isUrlToken(token)) {
+        url = token;
+      }
+    }
+
+    if (!url) {
+      throw new Error('Could not find a URL in the cURL command.');
+    }
+
+    const body = parseBody(dataParts);
+
+    return {
+      url,
+      method: method || (dataParts.length ? 'POST' : 'GET'),
+      headers: JSON.stringify(headers, null, 2),
+      query: body.query,
+      variables: body.variables
+    };
+  }
+
+  return {
+    parse,
+    tokenizeShell
+  };
+});
+
 // Serviço para gerenciar o estado das abas
 app.factory('TabService', ['AppState', function (state) {
   const STORAGE_KEY = 'tabs';
@@ -143,7 +431,7 @@ app.factory('TabService', ['AppState', function (state) {
   };
 }]);
 
-app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService', 'I18nService', function ($scope, $timeout, AppState, TabService, I18nService) {
+app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService', 'I18nService', 'CurlImportService', function ($scope, $timeout, AppState, TabService, I18nService, CurlImportService) {
   const $ctrl = this;
   const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
   const SHARED_HEADERS_STORAGE_KEY = 'sharedHeaders';
@@ -825,6 +1113,90 @@ app.controller('MainController', ['$scope', '$timeout', 'AppState', 'TabService'
     $timeout(() => {
       $scope.$applyAsync();
     }, 0);
+  };
+
+  function showCurlImportError() {
+    if (typeof window !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function') {
+      window.Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: $ctrl.t('curl.import_error'),
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true
+      });
+      return;
+    }
+
+    window.alert($ctrl.t('curl.import_error'));
+  }
+
+  function applyCurlImport(curlText) {
+    const parsed = CurlImportService.parse(curlText);
+    const activeTab = $ctrl.tabs[$ctrl.activeTab];
+
+    if (!activeTab) {
+      return;
+    }
+
+    $ctrl.url = parsed.url;
+    activeTab.headers = parsed.headers;
+    activeTab.variables = parsed.variables;
+
+    if (parsed.query) {
+      activeTab.query = parsed.query;
+    }
+
+    applyAutomaticTabTitle(activeTab, $ctrl.activeTab);
+    sessionStorage.setItem('url', $ctrl.url);
+    TabService.saveTabs($ctrl.tabs);
+    loadSchema($ctrl.url);
+    $ctrl.persistTabs();
+
+    $timeout(() => {
+      $scope.$applyAsync();
+      refreshActiveTabEditors();
+    }, 0);
+  }
+
+  $ctrl.importCurlText = function (curlText) {
+    try {
+      applyCurlImport(curlText);
+      return true;
+    } catch (error) {
+      showCurlImportError();
+      return false;
+    }
+  };
+
+  $ctrl.openCurlImport = function () {
+    if (typeof window !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function') {
+      window.Swal.fire({
+        title: $ctrl.t('curl.import_title'),
+        input: 'textarea',
+        inputPlaceholder: $ctrl.t('curl.import_placeholder'),
+        inputAttributes: {
+          autocapitalize: 'off',
+          spellcheck: 'false'
+        },
+        showCancelButton: true,
+        confirmButtonText: $ctrl.t('curl.import_confirm'),
+        preConfirm: (value) => {
+          if (!$ctrl.importCurlText(value || '')) {
+            return false;
+          }
+
+          return true;
+        }
+      });
+      return;
+    }
+
+    const curlText = window.prompt($ctrl.t('curl.import_placeholder'));
+    if (curlText) {
+      $ctrl.importCurlText(curlText);
+    }
   };
 
   $ctrl.send = async function () {

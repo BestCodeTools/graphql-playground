@@ -14,7 +14,11 @@
       let editor = null;
       let tooltipElement = null;
       let hideTooltipTimeout = null;
+      let foldPreviewElement = null;
+      let hideFoldPreviewTimeout = null;
+      let foldGutterRefreshTimeout = null;
       let resizeHandler = null;
+      const FOLD_GUTTER = 'graphql-fold-gutter';
       const graphqlKeywords = [
         'query',
         'mutation',
@@ -1708,6 +1712,7 @@
         const normalizedOperation = operationName === 'mutation' ? 'mutation' : 'query';
         const nextValue = `${normalizedOperation} {\n  \n}`;
 
+        clearFoldMarks(editor);
         editor.setValue(nextValue);
         editor.setCursor({ line: 1, ch: 2 });
         $ctrl.query = nextValue;
@@ -1719,6 +1724,326 @@
         }
 
         $ctrl._syncParent();
+      }
+
+      function findMatchingClosingBrace(text, openIndex) {
+        let depth = 0;
+        let inString = false;
+        let blockString = false;
+        let blockComment = false;
+        let escaped = false;
+
+        for (let index = openIndex; index < text.length; index += 1) {
+          const char = text[index];
+          const next = text[index + 1];
+          const third = text[index + 2];
+
+          if (blockComment) {
+            if (char === '*' && next === '/') {
+              blockComment = false;
+              index += 1;
+            }
+            continue;
+          }
+
+          if (blockString) {
+            if (char === '"' && next === '"' && third === '"') {
+              blockString = false;
+              index += 2;
+            }
+            continue;
+          }
+
+          if (inString) {
+            if (char === '"' && !escaped) {
+              inString = false;
+            }
+
+            escaped = !escaped && char === '\\';
+            continue;
+          }
+
+          if (char === '#') {
+            while (index < text.length && text[index] !== '\n') {
+              index += 1;
+            }
+            continue;
+          }
+
+          if (char === '/' && next === '*') {
+            blockComment = true;
+            index += 1;
+            continue;
+          }
+
+          if (char === '"' && next === '"' && third === '"') {
+            blockString = true;
+            index += 2;
+            continue;
+          }
+
+          if (char === '"') {
+            inString = true;
+            escaped = false;
+            continue;
+          }
+
+          if (char === '{') {
+            depth += 1;
+            continue;
+          }
+
+          if (char === '}') {
+            depth -= 1;
+
+            if (depth === 0) {
+              return index;
+            }
+          }
+        }
+
+        return -1;
+      }
+
+      function getFoldRangeAtLine(cm, line) {
+        const lineText = cm.getLine(line) || '';
+        let braceIndex = lineText.indexOf('{');
+
+        while (braceIndex !== -1) {
+          const tokenType = cm.getTokenTypeAt({ line, ch: braceIndex + 1 }) || '';
+
+          if (/(string|comment)/.test(tokenType)) {
+            braceIndex = lineText.indexOf('{', braceIndex + 1);
+            continue;
+          }
+
+          const openIndex = cm.indexFromPos({ line, ch: braceIndex });
+          const closeIndex = findMatchingClosingBrace(cm.getValue(), openIndex);
+
+          if (closeIndex > openIndex) {
+            const closePos = cm.posFromIndex(closeIndex);
+
+            if (closePos.line > line || closePos.ch - braceIndex > 6) {
+              return {
+                from: { line, ch: braceIndex },
+                to: closePos
+              };
+            }
+          }
+
+          braceIndex = lineText.indexOf('{', braceIndex + 1);
+        }
+
+        return null;
+      }
+
+      function getFoldMarksAtLine(cm, line) {
+        const lineLength = (cm.getLine(line) || '').length;
+
+        return cm.findMarks({ line, ch: 0 }, { line, ch: lineLength + 1 })
+          .filter((mark) => mark && mark.__graphqlBlockFold);
+      }
+
+      function isLineFolded(cm, line) {
+        return getFoldMarksAtLine(cm, line).length > 0;
+      }
+
+      function getFoldPreviewText(cm, range) {
+        const content = cm.getRange(
+          { line: range.from.line, ch: range.from.ch + 1 },
+          range.to
+        ).trim();
+
+        if (!content) {
+          return '';
+        }
+
+        const lines = content
+          .split(/\r?\n/)
+          .map((line) => line.trimEnd())
+          .filter((line) => line.trim())
+          .slice(0, 12);
+        const preview = lines.join('\n');
+
+        return preview.length > 520 ? `${preview.slice(0, 520)}...` : preview;
+      }
+
+      function ensureFoldPreviewElement() {
+        if (foldPreviewElement || typeof document === 'undefined') {
+          return foldPreviewElement;
+        }
+
+        foldPreviewElement = document.createElement('pre');
+        foldPreviewElement.className = 'graphql-fold-preview';
+        foldPreviewElement.style.display = 'none';
+        document.body.appendChild(foldPreviewElement);
+        return foldPreviewElement;
+      }
+
+      function positionFoldPreview(event) {
+        if (!foldPreviewElement || !event) {
+          return;
+        }
+
+        const gap = 10;
+        const maxLeft = Math.max(gap, window.innerWidth - 440 - gap);
+        const maxTop = Math.max(gap, window.innerHeight - 220 - gap);
+
+        foldPreviewElement.style.left = `${Math.min(event.clientX + gap, maxLeft)}px`;
+        foldPreviewElement.style.top = `${Math.min(event.clientY + gap, maxTop)}px`;
+      }
+
+      function showFoldPreview(previewText, event) {
+        const preview = ensureFoldPreviewElement();
+
+        if (!preview || !previewText) {
+          return;
+        }
+
+        if (hideFoldPreviewTimeout) {
+          window.clearTimeout(hideFoldPreviewTimeout);
+          hideFoldPreviewTimeout = null;
+        }
+
+        preview.textContent = previewText;
+        preview.style.display = 'block';
+        preview.classList.remove('is-visible');
+        positionFoldPreview(event);
+
+        window.requestAnimationFrame(() => {
+          if (preview) {
+            preview.classList.add('is-visible');
+          }
+        });
+      }
+
+      function hideFoldPreview() {
+        if (!foldPreviewElement) {
+          return;
+        }
+
+        foldPreviewElement.classList.remove('is-visible');
+
+        if (hideFoldPreviewTimeout) {
+          window.clearTimeout(hideFoldPreviewTimeout);
+        }
+
+        hideFoldPreviewTimeout = window.setTimeout(() => {
+          if (foldPreviewElement) {
+            foldPreviewElement.style.display = 'none';
+          }
+          hideFoldPreviewTimeout = null;
+        }, 160);
+      }
+
+      function makeFoldGutterMarker(isFolded) {
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.className = 'graphql-fold-gutter-marker';
+        marker.textContent = isFolded ? '▸' : '▾';
+        marker.title = isFolded ? 'Expand block' : 'Collapse block';
+        return marker;
+      }
+
+      function scheduleFoldGutterRefresh(cm) {
+        if (!cm || typeof window === 'undefined') {
+          return;
+        }
+
+        if (foldGutterRefreshTimeout) {
+          window.clearTimeout(foldGutterRefreshTimeout);
+        }
+
+        foldGutterRefreshTimeout = window.setTimeout(() => {
+          refreshFoldGutters(cm);
+          foldGutterRefreshTimeout = null;
+        }, 60);
+      }
+
+      function refreshFoldGutters(cm) {
+        if (!cm) {
+          return;
+        }
+
+        cm.clearGutter(FOLD_GUTTER);
+
+        for (let line = 0; line < cm.lineCount(); line += 1) {
+          const hasRange = getFoldRangeAtLine(cm, line);
+          const folded = isLineFolded(cm, line);
+
+          if (hasRange || folded) {
+            cm.setGutterMarker(line, FOLD_GUTTER, makeFoldGutterMarker(folded));
+          }
+        }
+      }
+
+      function clearFoldMarks(cm, line) {
+        const marks = typeof line === 'number'
+          ? getFoldMarksAtLine(cm, line)
+          : cm.getAllMarks().filter((mark) => mark && mark.__graphqlBlockFold);
+
+        marks.forEach((mark) => mark.clear());
+      }
+
+      function foldBlock(cm, range) {
+        const previewText = getFoldPreviewText(cm, range);
+        const widget = document.createElement('span');
+        let marker = null;
+
+        widget.className = 'graphql-fold-widget';
+        widget.textContent = '{ ... }';
+        widget.title = 'Expand block';
+        widget.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (marker) {
+            marker.clear();
+          }
+
+          hideFoldPreview();
+          refreshFoldGutters(cm);
+          cm.focus();
+        });
+        widget.addEventListener('mouseenter', (event) => showFoldPreview(previewText, event));
+        widget.addEventListener('mousemove', positionFoldPreview);
+        widget.addEventListener('mouseleave', hideFoldPreview);
+
+        marker = cm.markText(
+          range.from,
+          { line: range.to.line, ch: range.to.ch + 1 },
+          {
+            replacedWith: widget,
+            clearOnEnter: false,
+            atomic: true
+          }
+        );
+        marker.__graphqlBlockFold = true;
+        refreshFoldGutters(cm);
+      }
+
+      function toggleFoldAtLine(cm, line) {
+        const existingMarks = getFoldMarksAtLine(cm, line);
+
+        if (existingMarks.length) {
+          existingMarks.forEach((mark) => mark.clear());
+          hideFoldPreview();
+          refreshFoldGutters(cm);
+          return;
+        }
+
+        const range = getFoldRangeAtLine(cm, line);
+
+        if (!range) {
+          return;
+        }
+
+        foldBlock(cm, range);
+      }
+
+      function toggleFoldAtCursor(cm) {
+        const cursor = cm.getCursor();
+        toggleFoldAtLine(cm, cursor.line);
       }
 
       function createEditor() {
@@ -1735,6 +2060,7 @@
           lineNumbers: true,
           lineWrapping: true,
           matchBrackets: true,
+          gutters: ['CodeMirror-linenumbers', FOLD_GUTTER],
           indentUnit: 2,
           tabSize: 2,
           viewportMargin: Infinity,
@@ -1757,6 +2083,9 @@
             },
             'Ctrl-Space'(cm) {
               triggerAutocomplete(cm);
+            },
+            'Ctrl-Q'(cm) {
+              toggleFoldAtCursor(cm);
             }
           }
         });
@@ -1777,6 +2106,7 @@
             $ctrl.onChange();
           }
           $ctrl._syncParent();
+          scheduleFoldGutterRefresh(instance);
         });
 
         editor.on('inputRead', (cm, change) => {
@@ -1792,8 +2122,14 @@
         });
 
         bindHoverHandlers(editor);
+        editor.on('gutterClick', (cm, line, gutter) => {
+          if (gutter === FOLD_GUTTER) {
+            toggleFoldAtLine(cm, line);
+          }
+        });
         $ctrl._lastEditorValue = editor.getValue();
         $ctrl._lastAppliedQuery = editor.getValue();
+        refreshFoldGutters(editor);
         scheduleRefresh();
       }
 
@@ -1805,6 +2141,7 @@
         window.requestAnimationFrame(() => {
           if (editor) {
             editor.refresh();
+            refreshFoldGutters(editor);
           }
         });
       }
@@ -1846,10 +2183,12 @@
         }
 
         const cursor = editor.getCursor();
+        clearFoldMarks(editor);
         editor.setValue(nextValue);
         editor.setCursor(cursor);
         $ctrl._lastAppliedQuery = nextValue;
         $ctrl._lastEditorValue = nextValue;
+        scheduleFoldGutterRefresh(editor);
       };
 
       $ctrl.$doCheck = function () {
@@ -1864,10 +2203,12 @@
         }
 
         const cursor = editor.getCursor();
+        clearFoldMarks(editor);
         editor.setValue(nextValue);
         editor.setCursor(cursor);
         $ctrl._lastAppliedQuery = nextValue;
         $ctrl._lastEditorValue = nextValue;
+        scheduleFoldGutterRefresh(editor);
       };
 
       $ctrl.$onDestroy = function () {
@@ -1876,8 +2217,15 @@
           resizeHandler = null;
         }
 
+        if (foldGutterRefreshTimeout) {
+          window.clearTimeout(foldGutterRefreshTimeout);
+          foldGutterRefreshTimeout = null;
+        }
+
         if (editor) {
           hideTooltip();
+          hideFoldPreview();
+          clearFoldMarks(editor);
           editor.toTextArea();
           editor = null;
         }
@@ -1889,6 +2237,15 @@
           }
           tooltipElement.parentNode.removeChild(tooltipElement);
           tooltipElement = null;
+        }
+
+        if (foldPreviewElement && foldPreviewElement.parentNode) {
+          if (hideFoldPreviewTimeout) {
+            window.clearTimeout(hideFoldPreviewTimeout);
+            hideFoldPreviewTimeout = null;
+          }
+          foldPreviewElement.parentNode.removeChild(foldPreviewElement);
+          foldPreviewElement = null;
         }
       };
     }]

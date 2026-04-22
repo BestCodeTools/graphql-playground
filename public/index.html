@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground</title>
-  <link rel="stylesheet" href="./styles/main.css?v=20260409r">
+  <link rel="stylesheet" href="./styles/main.css?v=20260422d">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.css">
@@ -14,12 +14,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-  <script src="./js/main.js?v=20260409p"></script>
+  <script src="./js/main.js?v=20260422a"></script>
   <script src="./js/components/config-editor.js?v=20260409e"></script>
-  <script src="./js/components/query-editor.js?v=20260409t"></script>
-  <script src="./js/components/variables-editor.js?v=20260409k"></script>
-  <script src="./js/components/headers-editor.js?v=20260409i"></script>
-  <script src="./js/components/response-viewer.js?v=20260409c"></script>
+  <script src="./js/components/editor-folding.js?v=20260422c"></script>
+  <script src="./js/components/query-editor.js?v=20260422b"></script>
+  <script src="./js/components/variables-editor.js?v=20260422c"></script>
+  <script src="./js/components/headers-editor.js?v=20260422c"></script>
+  <script src="./js/components/response-viewer.js?v=20260422d"></script>
   <script src="./js/components/schema-viewer.js?v=20260409g"></script>
 </head>
 <body ng-class="{ 'ready': main.ready }" ng-controller="MainController as main">
@@ -41,6 +42,7 @@
   <div class="editor">
     <div class="input-group">
       <input class="form-control" type="text" ng-model="main.url" placeholder="URL">
+      <button type="button" ng-click="main.openCurlImport()">{{ main.t('actions.import_curl') }}</button>
       <button ng-click="main.send()">{{ main.t('actions.send') }}</button>
     </div>
     <div class="tabs">

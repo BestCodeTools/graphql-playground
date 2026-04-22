@@ -10,6 +10,7 @@
     controller: ['$element', function ($element) {
       const $ctrl = this;
       let editor = null;
+      let folding = null;
       let resizeHandler = null;
 
       function ensureResponseMode() {
@@ -133,6 +134,9 @@
             }
 
             editor.refresh();
+            if (folding) {
+              folding.refresh();
+            }
           }
         });
       }
@@ -151,11 +155,20 @@
           lineNumbers: true,
           lineWrapping: true,
           readOnly: true,
+          gutters: ['CodeMirror-linenumbers', window.GraphqlPlaygroundEditorFolding.FOLD_GUTTER],
+          extraKeys: {
+            'Ctrl-Q'() {
+              if (folding) {
+                folding.toggleAtCursor();
+              }
+            }
+          },
           viewportMargin: Infinity
         });
 
         editor.setValue($ctrl.result || '');
         editor.setSize('100%', '100%');
+        folding = window.GraphqlPlaygroundEditorFolding.createBlockFolding(editor);
         scheduleRefresh();
       }
 
@@ -180,8 +193,14 @@
         }
 
         const scrollInfo = editor.getScrollInfo();
+        if (folding) {
+          folding.clear();
+        }
         editor.setValue(nextValue);
         editor.scrollTo(scrollInfo.left, scrollInfo.top);
+        if (folding) {
+          folding.scheduleRefresh();
+        }
         scheduleRefresh();
       };
 
@@ -192,6 +211,10 @@
         }
 
         if (editor) {
+          if (folding) {
+            folding.destroy();
+            folding = null;
+          }
           editor.toTextArea();
           editor = null;
         }
