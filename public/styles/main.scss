@@ -838,7 +838,8 @@ td, th {
 
 .query-editor .graphql-fold-gutter,
 .variables-editor .graphql-fold-gutter,
-.headers-editor .graphql-fold-gutter {
+.headers-editor .graphql-fold-gutter,
+.response-viewer-container .graphql-fold-gutter {
   width: 18px;
   background-color: #252526;
 }
