@@ -21,7 +21,9 @@ It is designed to be embedded into an Express application or run as a standalone
 - query editor with GraphQL autocomplete and inline tooltips
 - variables editor with schema-aware suggestions
 - headers editor with common header suggestions
-- response viewer with JSON syntax highlighting
+- response viewer with JSON syntax highlighting and visible selection states
+- collapsible blocks in the query editor, variables editor, headers editor, and response viewer
+- cURL import support for shell-style multiline commands
 - multi-tab workspace with import/export support
 - Docker image support for a compiled runtime
 
