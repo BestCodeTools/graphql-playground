@@ -25,4 +25,4 @@ COPY --from=build /app/public ./public
 
 EXPOSE 3000
 
-CMD ["node", "dist/standalone.js"]
+CMD ["node", "dist/src/standalone.js"]

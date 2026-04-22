@@ -1,6 +1,6 @@
 {
   "name": "@bestcodetools/graphql-playground",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A standalone GraphQL Playground package with a custom dark UI, schema explorer, smart editors, workspace import/export, and Docker support.",
   "keywords": [],
   "homepage": "https://github.com/BestCodeTools/graphql-playground#readme",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "tsc --outDir dist",
-    "start": "node dist/standalone.js",
+    "start": "node dist/src/standalone.js",
     "standalone": "ts-node-dev --transpile-only src/standalone.ts",
     "transpile:sass:watch": "sass --watch public/styles:public/styles",
     "test": "jest"
